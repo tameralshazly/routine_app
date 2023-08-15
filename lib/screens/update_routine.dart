@@ -1,7 +1,10 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:routine_app/collections/category.dart';
 import 'package:routine_app/collections/routine.dart';
+import 'package:routine_app/main.dart';
 
 class UpdateRoutine extends StatefulWidget {
   final Isar isar;
@@ -38,16 +41,43 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
   }
 
   @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffffffff),
-      appBar: AppBar(title: const Text('Update routine')),
+      appBar: AppBar(
+        title: const Text('Update routine'),
+        actions: [
+          IconButton(
+              onPressed: () {
+                showDialog(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                          title: const Text('Delete content'),
+                          content:
+                              const Text('Are you sure you want to delete?'),
+                          actions: [
+                            ElevatedButton(
+                                onPressed: () {
+                                  deleteRoutine();
+                                },
+                                child: const Text(
+                                  "Yes",
+                                  style: TextStyle(color: Colors.green),
+                                )),
+                            ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  "No",
+                                  style: TextStyle(color: Colors.red),
+                                ))
+                          ],
+                        ));
+              },
+              icon: const Icon(Icons.delete)),
+        ],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -185,7 +215,7 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
   _addCategory(Isar isar) async {
     final categories = isar.categorys;
     final newCategory = Category()..name = _newCatController.text;
-    await isar.writeTxn(() async {
+    await isar.writeTxnSync(() async {
       await categories.put(newCategory);
     });
 
@@ -221,15 +251,29 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
     final routineCollection = widget.isar.routines;
     await widget.isar.writeTxn(() async {
       final routine = await routineCollection.get(widget.routine.id);
+      await widget.routine.category.load();
 
       routine!
         ..title = _titleController.text
         ..startTime = _timeController.text
         ..day = dropdownDay
-        ..category.value = dropdownValue;
+        ..category.value!.name = dropdownValue!.name;
 
       await routineCollection.put(routine);
-      Navigator.pop(context);
     });
+    Navigator.pop(context);
+  }
+
+  deleteRoutine() async {
+    final routineCollection = widget.isar.routines;
+
+    await widget.isar.writeTxn(() async {
+      routineCollection.delete(widget.routine.id);
+    });
+    Navigator.push(context, MaterialPageRoute(
+      builder: (context) {
+        return MainPage(isar: widget.isar);
+      },
+    ));
   }
 }
