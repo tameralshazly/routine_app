@@ -211,7 +211,6 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
     await widget.routine.category.load();
 
     int? getId = widget.routine.category.value?.id;
-    print(getId);
 
     setState(() {
       dropdownValue = categories?[getId! - 1];
