@@ -5,12 +5,10 @@ import 'package:routine_app/collections/routine.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:routine_app/screens/create_routine.dart';
 import 'package:routine_app/screens/update_routine.dart';
-import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final Directory dir = await getApplicationSupportDirectory();
-
+  final dir = await getApplicationSupportDirectory();
   final isar =
       await Isar.open([RoutineSchema, CategorySchema], directory: dir.path);
   runApp(MyApp(isar: isar));
@@ -18,24 +16,24 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   final Isar isar;
-  const MyApp({super.key, required this.isar});
+  const MyApp({Key? key, required this.isar}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'Routine app',
       theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueAccent),
-          useMaterial3: true),
+        primarySwatch: Colors.blue,
+      ),
       home: MainPage(isar: isar),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
 class MainPage extends StatefulWidget {
   final Isar isar;
-  const MainPage({super.key, required this.isar});
+  const MainPage({Key? key, required this.isar}) : super(key: key);
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -51,9 +49,9 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blueAccent,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Routine'),
+        title: const Text("Routine"),
         actions: [
           IconButton(
               onPressed: () {
@@ -63,14 +61,7 @@ class _MainPageState extends State<MainPage> {
                         builder: (context) =>
                             CreateRoutine(isar: widget.isar)));
               },
-              icon: const Icon(Icons.add)),
-          IconButton(
-              onPressed: () async {
-                await widget.isar.writeTxn(() async {
-                  await widget.isar.clear();
-                });
-              },
-              icon: const Icon(Icons.delete_forever_sharp)),
+              icon: const Icon(Icons.add))
         ],
       ),
       body: SingleChildScrollView(

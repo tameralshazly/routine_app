@@ -3,15 +3,16 @@ import 'package:isar/isar.dart';
 import 'package:routine_app/collections/category.dart';
 import 'package:routine_app/collections/routine.dart';
 
-class CreateRoutine extends StatefulWidget {
+class UpdateRoutine extends StatefulWidget {
   final Isar isar;
-  const CreateRoutine({super.key, required this.isar});
+  final Routine routine;
+  const UpdateRoutine({super.key, required this.isar, required this.routine});
 
   @override
-  State<CreateRoutine> createState() => _CreateRoutineState();
+  State<UpdateRoutine> createState() => _UpdateRoutineState();
 }
 
-class _CreateRoutineState extends State<CreateRoutine> {
+class _UpdateRoutineState extends State<UpdateRoutine> {
   List<Category>? categories;
   Category? dropdownValue;
   final TextEditingController _titleController = TextEditingController();
@@ -27,18 +28,26 @@ class _CreateRoutineState extends State<CreateRoutine> {
     'Friday'
   ];
   String dropdownDay = 'Saturday';
+
   TimeOfDay selectedTime = TimeOfDay.now();
+
   @override
   void initState() {
     super.initState();
-    _readCategory();
+    _setRoutineInfo();
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffffffff),
-      appBar: AppBar(title: const Text("Create routine")),
+      appBar: AppBar(title: const Text('Update routine')),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -76,8 +85,9 @@ class _CreateRoutineState extends State<CreateRoutine> {
                       showDialog(
                           context: context,
                           builder: (BuildContext context) => AlertDialog(
-                                title: const Text("New Category"),
+                                title: const Text('New Category'),
                                 content: TextFormField(
+                                    autofocus: true,
                                     controller: _newCatController),
                                 actions: [
                                   ElevatedButton(
@@ -86,7 +96,7 @@ class _CreateRoutineState extends State<CreateRoutine> {
                                           _addCategory(widget.isar);
                                         }
                                       },
-                                      child: const Text("Add"))
+                                      child: const Text('Add'))
                                 ],
                               ));
                     },
@@ -125,7 +135,7 @@ class _CreateRoutineState extends State<CreateRoutine> {
             ),
             const Padding(
               padding: EdgeInsets.only(top: 10.0),
-              child: Text("Day", style: TextStyle(fontWeight: FontWeight.bold)),
+              child: Text('Day', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
             SizedBox(
               width: MediaQuery.of(context).size.width * 0.7,
@@ -147,9 +157,9 @@ class _CreateRoutineState extends State<CreateRoutine> {
                 alignment: Alignment.center,
                 child: ElevatedButton(
                     onPressed: () {
-                      addRoutine();
+                      updateRoutine();
                     },
-                    child: const Text("Add")))
+                    child: const Text('Update')))
           ]),
         ),
       ),
@@ -192,23 +202,35 @@ class _CreateRoutineState extends State<CreateRoutine> {
     });
   }
 
-  addRoutine() async {
-    final routineCollection = widget.isar.routines;
-    final newRoutine = Routine()
-      ..title = _titleController.text
-      ..startTime = _timeController.text
-      ..day = dropdownDay
-      ..category.value = dropdownValue;
+  _setRoutineInfo() async {
+    await _readCategory();
+    _titleController.text = widget.routine.title;
+    _timeController.text = widget.routine.startTime;
+    dropdownDay = widget.routine.day;
 
-    await widget.isar.writeTxnSync(() async {
-      // await categories.put(newCategory);
-      routineCollection.putSync(newRoutine);
-    });
-    _titleController.clear();
-    _timeController.clear();
+    await widget.routine.category.load();
+
+    int? getId = widget.routine.category.value?.id;
+    print(getId);
+
     setState(() {
-      dropdownDay = days[0];
-      dropdownValue = null;
+      dropdownValue = categories?[getId! - 1];
+    });
+  }
+
+  updateRoutine() async {
+    final routineCollection = widget.isar.routines;
+    await widget.isar.writeTxn(() async {
+      final routine = await routineCollection.get(widget.routine.id);
+
+      routine!
+        ..title = _titleController.text
+        ..startTime = _timeController.text
+        ..day = dropdownDay
+        ..category.value = dropdownValue;
+
+      await routineCollection.put(routine);
+      Navigator.pop(context);
     });
   }
 }
