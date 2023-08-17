@@ -27,7 +27,7 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
     'Monday',
     'Tuesday',
     'Wednesday',
-    'Thirsday',
+    'Thursday',
     'Friday'
   ];
   String dropdownDay = 'Saturday';
@@ -234,34 +234,22 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
 
   _setRoutineInfo() async {
     await _readCategory();
+
     _titleController.text = widget.routine.title;
     _timeController.text = widget.routine.startTime;
     dropdownDay = widget.routine.day;
 
     await widget.routine.category.load();
-
-    int? getId = widget.routine.category.value?.id;
-
-    setState(() {
-      dropdownValue = categories?[getId! - 1];
-    });
-  }
-
-  updateRoutine() async {
-    final routineCollection = widget.isar.routines;
-    await widget.isar.writeTxn(() async {
-      final routine = await routineCollection.get(widget.routine.id);
-      await widget.routine.category.load();
-
-      routine!
-        ..title = _titleController.text
-        ..startTime = _timeController.text
-        ..day = dropdownDay
-        ..category.value!.name = dropdownValue!.name;
-
-      await routineCollection.put(routine);
-    });
-    Navigator.pop(context);
+    final findCategory = widget.routine.category.value;
+    int x = 0;
+    for (int i = 0; i < categories!.length; i++) {
+      if (categories?[i].id == findCategory?.id) {
+        x = i;
+        setState(() {
+          dropdownValue = categories?[x];
+        });
+      }
+    }
   }
 
   deleteRoutine() async {
@@ -275,5 +263,26 @@ class _UpdateRoutineState extends State<UpdateRoutine> {
         return MainPage(isar: widget.isar);
       },
     ));
+  }
+
+  void updateRoutine() async {
+    final routineCollection = widget.isar.routines;
+
+    await widget.isar.writeTxn(() async {
+      final routine = await routineCollection.get(widget.routine.id);
+
+      routine!
+        ..title = _titleController.text
+        ..startTime = _timeController.text
+        ..day = dropdownDay
+        ..category.value = dropdownValue;
+
+      routineCollection.put(routine);
+
+      await routine.category.save();
+    });
+
+    // Pop the current context from the stack.
+    Navigator.pop(context);
   }
 }
