@@ -10,10 +10,11 @@ import 'dart:io';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final Directory dir = await getApplicationSupportDirectory();
-
-  final isar =
-      await Isar.open([RoutineSchema, CategorySchema], directory: dir.path);
-  runApp(MyApp(isar: isar));
+  if (dir.existsSync()) {
+    final isar =
+        await Isar.open([RoutineSchema, CategorySchema], directory: dir.path);
+    runApp(MyApp(isar: isar));
+  }
 }
 
 class MyApp extends StatelessWidget {
