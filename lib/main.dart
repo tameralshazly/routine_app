@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
+import 'package:logger/logger.dart';
 import 'package:routine_app/collections/category.dart';
 import 'package:routine_app/collections/product.dart';
 import 'package:routine_app/collections/routine.dart';
@@ -87,6 +88,11 @@ class _MainPageState extends State<MainPage> {
                 _apiToIsar();
               },
               icon: const Icon(Icons.download)),
+          IconButton(
+              onPressed: () {
+                _isarToApi();
+              },
+              icon: const Icon(Icons.upload_sharp)),
         ],
       ),
       body: SingleChildScrollView(
@@ -331,5 +337,18 @@ class _MainPageState extends State<MainPage> {
   Future<List<Product>> generateProducts() async {
     List<Product> getProducts = await widget.isar.products.where().findAll();
     return getProducts;
+  }
+
+  _isarToApi() async {
+    final prodt = await widget.isar.products.where().findAll();
+    List<Map<String, dynamic>>? listProducts =
+        prodt.map((e) => e.toJson()).toList();
+
+    httpService.init(BaseOptions(baseUrl: serverUrl));
+    Map<String, dynamic> params = {'products': listProducts};
+    final response = await httpService.request(
+        endpoint: "/products", method: Method.POST, params: params);
+
+    Logger().i(response);
   }
 }
