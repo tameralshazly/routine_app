@@ -1,8 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:routine_app/collections/category.dart';
+import 'package:routine_app/collections/product.dart';
 import 'package:routine_app/collections/routine.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:routine_app/config.dart';
+import 'package:routine_app/http_service.dart';
 import 'package:routine_app/screens/create_routine.dart';
 import 'package:routine_app/screens/update_routine.dart';
 import 'dart:io';
@@ -11,8 +15,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final Directory dir = await getApplicationSupportDirectory();
   if (dir.existsSync()) {
-    final isar =
-        await Isar.open([RoutineSchema, CategorySchema], directory: dir.path);
+    final isar = await Isar.open([RoutineSchema, CategorySchema, ProductSchema],
+        directory: dir.path);
     runApp(MyApp(isar: isar));
   }
 }
@@ -48,6 +52,8 @@ class _MainPageState extends State<MainPage> {
   bool searching = false;
   String feedback = '';
   MaterialColor feedbackColor = Colors.blue;
+  HttpService httpService = HttpService();
+
   @override
   void initState() {
     super.initState();
@@ -76,6 +82,11 @@ class _MainPageState extends State<MainPage> {
                 });
               },
               icon: const Icon(Icons.delete_forever_sharp)),
+          IconButton(
+              onPressed: () {
+                _apiToIsar();
+              },
+              icon: const Icon(Icons.download)),
         ],
       ),
       body: SingleChildScrollView(
@@ -107,6 +118,63 @@ class _MainPageState extends State<MainPage> {
                 builder: (context, snapshot) {
                   if (snapshot.hasData) {
                     return Column(children: snapshot.data!);
+                  } else {
+                    return const SizedBox();
+                  }
+                }),
+            FutureBuilder<List<Product>>(
+                future: generateProducts(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    if (snapshot.data!.isNotEmpty) {
+                      return GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const ScrollPhysics(),
+                          children:
+                              List.generate(snapshot.data!.length, (index) {
+                            return Card(
+                              elevation: 4.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                                0.4,
+                                        height: 90,
+                                        child: SizedBox(
+                                          width: MediaQuery.of(context)
+                                                  .size
+                                                  .width *
+                                              0.4,
+                                          height: 90,
+                                          child: Image.network(
+                                            snapshot.data![index].image!,
+                                            fit: BoxFit.fitHeight,
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 5),
+                                        child: Text(
+                                          snapshot.data![index].title!,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                          onPressed: () {},
+                                          child: const Text("View"))
+                                    ]),
+                              ),
+                            );
+                          }));
+                    } else {
+                      return const SizedBox();
+                    }
                   } else {
                     return const SizedBox();
                   }
@@ -243,5 +311,25 @@ class _MainPageState extends State<MainPage> {
         feedbackColor = Colors.green;
       }
     });
+  }
+
+  _apiToIsar() async {
+    httpService
+        .init(BaseOptions(baseUrl: baseUrl, contentType: "application/json"));
+    final response = await httpService.request(
+        endpoint: "$baseUrl?limit=6", method: Method.GET);
+
+    List<Map<String, dynamic>>? products = (response.data as List)
+        .map((item) => item as Map<String, dynamic>)
+        .toList();
+    await widget.isar.writeTxn(() async {
+      await widget.isar.products.clear();
+      await widget.isar.products.importJson(products);
+    });
+  }
+
+  Future<List<Product>> generateProducts() async {
+    List<Product> getProducts = await widget.isar.products.where().findAll();
+    return getProducts;
   }
 }
